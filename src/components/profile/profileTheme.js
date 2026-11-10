@@ -1,0 +1,48 @@
+export const C = {
+  bg:             "var(--bg-primary)",
+  surface:        "var(--bg-secondary)",
+  border:         "var(--navbar-border)",
+  accent:         "#16734B",
+  accentDark:     "#10573A",
+  accentMid:      "#16734B",
+  accentFaint:    "#EBF5EE",
+  accentShadow:   "0 4px 12px rgba(22,115,75,0.22)",
+  disabled:       "#e2e8f0",
+  textPrimary:    "var(--text-primary)",
+  textMuted:      "var(--text-secondary)",
+  textSoft:       "var(--text-secondary)",
+  successBg:      "#EBF5EE",
+  successBorder:  "rgba(22,115,75,0.25)",
+  successText:    "#16734B",
+  gold:           "#986400",
+  goldLight:      "#d97706",
+  goldGradient:   "linear-gradient(135deg, #d97706 0%, #986400 100%)",
+  goldShadow:     "rgba(152,100,0,0.25)",
+  bannerGradient: "linear-gradient(135deg, #10573A 0%, #16734B 100%)",
+  bannerSubtitle: "rgba(255,255,255,0.85)",
+  btnShadow:      "0 4px 12px rgba(22,115,75,0.25)",
+  bannerBtnBg:    "rgba(255,255,255,0.15)",
+  bannerBtnBorder:"rgba(255,255,255,0.35)",
+  cardShadow:     "0 1px 4px rgba(22,115,75,0.08)",
+  dangerBg:       "rgba(185,56,56,0.08)",
+  dangerText:     "#B93838",
+  dangerBorder:   "rgba(185,56,56,0.25)",
+};
+
+export const FONT = {
+  display: "'Playfair Display', serif",
+  body:    "'DM Sans', sans-serif",
+};
+
+export const inputStyle = {
+  width:        "100%",
+  padding:      "10px 14px",
+  border:       `1px solid #DAE5DE`,
+  borderRadius: 10,
+  fontSize:     13,
+  color:        "var(--text-primary)",
+  fontFamily:   "'DM Sans', sans-serif",
+  background:   "var(--bg-secondary)",
+  outline:      "none",
+  boxSizing:    "border-box",
+};
