@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* "Fresh Green. Clear Care." Light Theme */
+  --bg-primary: #F7FAF8;
+  --bg-secondary: #FFFFFF;
+  --text-primary: #142D23;
+  --text-secondary: #52665D;
+  --navbar-bg: #FFFFFF;
+  --navbar-border: #DAE5DE;
+  --card-bg: #FFFFFF;
+  --card-border: #DAE5DE;
+  --accent-blue: #16734B;
+  --accent-blue-soft: #EBF5EE;
+
+  /* Brand Tokens */
+  --primary: #16734B;
+  --primary-dark: #10573A;
+  --primary-soft: #EBF5EE;
+  --border-color: #DAE5DE;
+}
+
+.dark {
+  /* Dark Theme */
+  --bg-primary: #0a1711;
+  --bg-secondary: #11221a;
+  --text-primary: #e6f4ed;
+  --text-secondary: #9cb3a7;
+  --navbar-bg: #11221a;
+  --navbar-border: rgba(218, 229, 222, 0.2);
+  --card-bg: #152920;
+  --card-border: rgba(218, 229, 222, 0.2);
+  --accent-blue: #34d399;
+  --accent-blue-soft: rgba(52, 211, 153, 0.15);
+
+  --primary: #34d399;
+  --primary-dark: #10573A;
+  --primary-soft: rgba(52, 211, 153, 0.15);
+  --border-color: rgba(218, 229, 222, 0.2);
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* Smooth transition for theme switching */
+* {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
