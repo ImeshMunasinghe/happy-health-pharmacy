@@ -100,7 +100,7 @@ export default function Sidebar() {
         {/* Logo + Name */}
         <div className={`flex items-center gap-3 min-w-0 ${isCollapsed && !mobile ? "hidden" : "flex"}`}>
           <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-white shadow-sm flex items-center justify-center border-2 border-white/20">
-            <img src="/logo.png" alt="Happy Health" className="w-full h-full object-cover scale-110" />
+            <img src="/logo.jpeg" alt="Happy Health" className="w-full h-full object-cover scale-110" />
           </div>
           <div className="min-w-0">
             <p className="text-[15px] font-bold text-white leading-tight tracking-tight truncate">
@@ -115,7 +115,7 @@ export default function Sidebar() {
         {/* Collapsed logo only (desktop) */}
         {isCollapsed && !mobile && (
           <div className="w-10 h-10 rounded-full overflow-hidden bg-white shadow-sm flex items-center justify-center border-2 border-white/20">
-            <img src="/logo.png" alt="Happy Health" className="w-full h-full object-cover scale-110" />
+            <img src="/logo.jpeg" alt="Happy Health" className="w-full h-full object-cover scale-110" />
           </div>
         )}
 

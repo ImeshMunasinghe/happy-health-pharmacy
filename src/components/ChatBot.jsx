@@ -119,9 +119,9 @@ export default function ChatBot({ onClose }) {
       <div className="bg-[#16734B] px-4 py-3 flex items-center gap-3">
         <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center overflow-hidden">
           <img
-            src="/logo.png"
+            src="/logo.jpeg"
             alt="Happy Health"
-            className="w-6 h-6 object-contain"
+            className="w-full h-full object-cover"
           />
         </div>
         <div>

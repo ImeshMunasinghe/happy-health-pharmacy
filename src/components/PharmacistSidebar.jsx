@@ -99,7 +99,7 @@ const PharmacistSidebar = ({ isMobileOpen, setIsMobileOpen }) => {
       <div className="h-[70px] flex items-center justify-between px-5 bg-[#10573A] border-b border-white/10 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-white shadow-sm flex items-center justify-center border-2 border-white/20">
-            <img src="/logo.png" alt="Happy Health" className="w-full h-full object-cover scale-110" />
+            <img src="/logo.jpeg" alt="Happy Health" className="w-full h-full object-cover scale-110" />
           </div>
           <span className="text-xl font-black tracking-wide text-white">
             Happy Health

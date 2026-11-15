@@ -69,9 +69,12 @@ export default function Footer() {
 
           {/* COMPANY */}
           <div>
-            <h2 style={{ fontFamily: FONT.display, fontSize: 22, fontWeight: 700, color: C.textPrimary, marginBottom: 4, marginTop: 0 }}>
-              Happy Health
-            </h2>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              <div style={{ width: 38, height: 38, borderRadius: "50%", backgroundImage: "url('/logo.jpeg')", backgroundSize: "cover", backgroundPosition: "center", border: "2px solid rgba(255,255,255,0.4)", flexShrink: 0 }} />
+              <h2 style={{ fontFamily: FONT.display, fontSize: 22, fontWeight: 700, color: C.textPrimary, margin: 0 }}>
+                Happy Health
+              </h2>
+            </div>
             <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.85)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10, marginTop: 0 }}>
               Your Trusted Pharmacy MIS
             </p>

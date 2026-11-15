@@ -424,6 +424,9 @@ const Register = () => {
       <div className="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-lg px-6 sm:px-10 py-8 sm:py-12 animate-[slideUp_0.5s_ease]">
         {/* Header */}
         <div className="text-center mb-8">
+          <div className="w-16 h-16 rounded-full overflow-hidden mx-auto mb-3 shadow-md border-2 border-emerald-100 flex items-center justify-center bg-white">
+            <img src="/logo.jpeg" alt="Happy Health Logo" className="w-full h-full object-cover" />
+          </div>
           <h1 className="text-4xl font-extrabold bg-gradient-to-r from-[#10573A] to-[#16734B] bg-clip-text text-transparent">
             Happy Health
           </h1>

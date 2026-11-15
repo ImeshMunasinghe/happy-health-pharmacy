@@ -111,7 +111,7 @@ export default function CustomerNavbar() {
 
             {/* Logo */}
             <Link to="/customer" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", flexShrink: 0 }}>
-              <div style={{ width: 46, height: 46, borderRadius: "50%", backgroundImage: "url('/logo.png')", backgroundSize: "cover", backgroundPosition: "center", border: "2.5px solid rgba(22,115,75,0.25)", flexShrink: 0 }} />
+              <div style={{ width: 46, height: 46, borderRadius: "50%", backgroundImage: "url('/logo.jpeg')", backgroundSize: "cover", backgroundPosition: "center", border: "2.5px solid rgba(22,115,75,0.25)", flexShrink: 0 }} />
               <div>
                 <div style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 20, color: "var(--text-primary)", lineHeight: 1.2 }}>
                   Happy Health

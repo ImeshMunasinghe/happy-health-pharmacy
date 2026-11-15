@@ -44,7 +44,7 @@ export default function Sidebar() {
         {!isCollapsed && (
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-white shadow-sm flex items-center justify-center border-2 border-white/20">
-              <img src="/logo.png" alt="Happy Health" className="w-full h-full object-cover scale-110" />
+              <img src="/logo.jpeg" alt="Happy Health" className="w-full h-full object-cover scale-110" />
             </div>
             <span className="text-[15px] font-bold text-white tracking-tight whitespace-nowrap">
               Happy Health
@@ -54,7 +54,7 @@ export default function Sidebar() {
 
         {isCollapsed && (
           <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-white shadow-sm flex items-center justify-center border-2 border-white/20">
-            <img src="/logo.png" alt="Happy Health" className="w-full h-full object-cover scale-110" />
+            <img src="/logo.jpeg" alt="Happy Health" className="w-full h-full object-cover scale-110" />
           </div>
         )}
 
