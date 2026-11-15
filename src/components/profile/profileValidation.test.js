@@ -1,5 +1,28 @@
 import { describe, it, expect } from "vitest";
-import { validateProfile, validateHealth, hasErrors, normalizePhone } from "./profileValidation";
+import { validateProfile, validateHealth, validatePasswordChange, hasErrors, normalizePhone } from "./profileValidation";
+
+describe("validatePasswordChange", () => {
+  const ok = { current: "OldPass1", newPass: "NewPass123", confirm: "NewPass123" };
+
+  it("accepts a valid change", () => {
+    expect(validatePasswordChange(ok)).toEqual({});
+  });
+
+  it("requires all fields", () => {
+    const e = validatePasswordChange({ current: "", newPass: "", confirm: "" });
+    expect(Object.keys(e).sort()).toEqual(["confirm", "current", "newPass"]);
+  });
+
+  it("enforces strength rules", () => {
+    expect(validatePasswordChange({ ...ok, newPass: "Ab1", confirm: "Ab1" }).newPass).toMatch(/8 characters/);
+    expect(validatePasswordChange({ ...ok, newPass: "alllowercase1", confirm: "alllowercase1" }).newPass).toBeDefined();
+  });
+
+  it("rejects reusing the current password and mismatched confirmation", () => {
+    expect(validatePasswordChange({ current: "SamePass1", newPass: "SamePass1", confirm: "SamePass1" }).newPass).toBeDefined();
+    expect(validatePasswordChange({ ...ok, confirm: "Different1" }).confirm).toMatch(/match/);
+  });
+});
 
 describe("validateProfile", () => {
   it("accepts a valid profile", () => {

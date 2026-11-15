@@ -77,9 +77,9 @@ export default function QuickLinks() {
       </div>
 
       {/* ── Navigation link cards ── */}
-      {/* Stacked on phones; three across on tablets (full-width column);
+      {/* Stacked on phones; 2×2 on tablets (full-width column);
           stacked again on desktop, where it sits in the narrower left column */}
-      <div className="px-4 py-[14px] grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-[10px]">
+      <div className="px-4 py-[14px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-[10px]">
         {/* Orders — view history and track deliveries */}
         <QuickLinkCard
           icon={ShoppingBag} label="My Orders"
@@ -100,6 +100,13 @@ export default function QuickLinks() {
           sub="Request returns and track refunds"
           color="#f59e0b"
           onClick={() => navigate("/customer/returns")}
+        />
+        {/* Settings — appearance, notifications and password */}
+        <QuickLinkCard
+          icon={Settings} label="Settings"
+          sub="Notifications, theme and password"
+          color="#64748b"
+          onClick={() => navigate("/customer/settings")}
         />
       </div>
     </div>

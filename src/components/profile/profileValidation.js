@@ -40,4 +40,21 @@ export function validateHealth({ dob, allergies, chronicConditions }) {
   return errors;
 }
 
-export const hasErrors = (errors) => Object.keys(errors).length > 0;
+// Password change: 8+ chars with upper, lower and a number; must differ from current.
+export function validatePasswordChange({ current, newPass, confirm }) {
+  const errors = {};
+  if (!current) errors.current = "Enter your current password.";
+
+  if (!newPass) errors.newPass = "Enter a new password.";
+  else if (newPass.length < 8) errors.newPass = "Use at least 8 characters.";
+  else if (!/[a-z]/.test(newPass) || !/[A-Z]/.test(newPass) || !/\d/.test(newPass))
+    errors.newPass = "Include upper- and lower-case letters and a number.";
+  else if (current && newPass === current) errors.newPass = "New password must be different from the current one.";
+
+  if (!confirm) errors.confirm = "Confirm your new password.";
+  else if (newPass && confirm !== newPass) errors.confirm = "Passwords don't match.";
+
+  return errors;
+}
+
+export const hasErrors =(errors) => Object.keys(errors).length > 0;

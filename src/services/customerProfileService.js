@@ -4,7 +4,8 @@
 // without the external backend.
 //
 // Data layout
-//   users/{uid}                    – public-ish profile (name, phone, address, photo, loyalty)
+//   users/{uid}                    – public-ish profile (name, phone, address, photo, loyalty,
+//                                    and a `preferences` map used by the Settings page)
 //   users/{uid}/private/health     – sensitive health info, separate doc so it can have
 //                                    stricter security rules (see firestore.profile.rules)
 //   CustomerOrders (email == …)    – shop orders, matched by email (no userId on these docs)
@@ -23,7 +24,8 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "./firebase";
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
+import { db, storage, auth } from "./firebase";
 import { COLLECTIONS, PROFILE_PICTURE_PATH } from "../components/utils/constants";
 
 // Only these fields may be changed by the customer from the profile page.
@@ -66,6 +68,64 @@ export async function uploadProfilePhoto(uid, file) {
   const url = await getDownloadURL(storageRef);
   await updateProfile(uid, { photoURL: url });
   return url;
+}
+
+// ── Settings: notification preferences ────────────────────────────────────────
+// Stored as a `preferences` map on users/{uid}. Nothing sends notifications yet;
+// these are saved so a future notifier (backend / Cloud Function) can honour them.
+
+export const DEFAULT_PREFERENCES = {
+  emailNotifications:  true,
+  smsNotifications:    false,
+  orderUpdates:        true,
+  prescriptionUpdates: true,
+  promotions:          false,
+};
+
+const PREFERENCE_KEYS = Object.keys(DEFAULT_PREFERENCES);
+
+export async function getPreferences(uid) {
+  const snap = await getDoc(doc(db, COLLECTIONS.USERS, uid));
+  const stored = snap.exists() ? snap.data().preferences || {} : {};
+  return { ...DEFAULT_PREFERENCES, ...pick(stored, PREFERENCE_KEYS) };
+}
+
+export async function updatePreferences(uid, prefs) {
+  const safe = { ...DEFAULT_PREFERENCES, ...pick(prefs, PREFERENCE_KEYS) };
+  await updateDoc(doc(db, COLLECTIONS.USERS, uid), {
+    preferences: safe,
+    updatedAt: serverTimestamp(),
+  });
+  return safe;
+}
+
+// ── Settings: password ────────────────────────────────────────────────────────
+
+// True when the signed-in user has an email/password login (not Google-only).
+export const hasPasswordLogin = (user) =>
+  !!user?.providerData?.some((p) => p.providerId === "password");
+
+// Re-authenticates with the current password (Firebase requires a recent login
+// for password changes), then sets the new one.
+export async function changePassword(currentPassword, newPassword) {
+  const user = auth.currentUser;
+  if (!user?.email) throw new Error("Not signed in.");
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+  await updatePassword(user, newPassword);
+}
+
+// Maps Firebase Auth error codes to customer-friendly messages.
+export function passwordErrorMessage(err) {
+  switch (err?.code) {
+    case "auth/wrong-password":
+    case "auth/invalid-credential":   return "Your current password is incorrect.";
+    case "auth/weak-password":        return "The new password is too weak.";
+    case "auth/too-many-requests":    return "Too many attempts. Please wait a few minutes and try again.";
+    case "auth/requires-recent-login":return "Please log out and log in again, then retry.";
+    case "auth/network-request-failed": return "Network error. Check your connection.";
+    default:                          return "Couldn't change your password. Please try again.";
+  }
 }
 
 // ── Health information (sensitive) ────────────────────────────────────────────

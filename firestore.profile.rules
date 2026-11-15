@@ -27,7 +27,8 @@ service cloud.firestore {
       // tier, role, customerId and email stay server/admin controlled.
       allow update: if isOwner(uid)
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['fullName', 'phone', 'address', 'photoURL', 'updatedAt', 'lastLogin'])
+             .hasOnly(['fullName', 'phone', 'address', 'photoURL', 'preferences', 'updatedAt', 'lastLogin'])
+        && (!('preferences' in request.resource.data) || request.resource.data.preferences is map)
         && (!('fullName' in request.resource.data) || request.resource.data.fullName is string && request.resource.data.fullName.size() <= 60)
         && (!('address'  in request.resource.data) || request.resource.data.address  is string && request.resource.data.address.size()  <= 200);
 
