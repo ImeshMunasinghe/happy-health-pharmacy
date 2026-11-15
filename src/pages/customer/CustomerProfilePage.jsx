@@ -1,136 +1,167 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAuth, signOut } from "firebase/auth";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { LogOut } from "lucide-react";
+import { LogOut, AlertCircle, RefreshCw } from "lucide-react";
+
+import { useAuth } from "../../context/AuthContext";
+import {
+  getProfile,
+  updateProfile,
+  uploadProfilePhoto,
+  getOrderCount,
+} from "../../services/customerProfileService";
+import { resolveLoyaltyPoints } from "../../components/profile/loyalty";
 
 import { C, FONT } from "../../components/profile/profileTheme";
 import ProfileHero    from "../../components/profile/ProfileHero";
 import LoyaltyCard    from "../../components/profile/LoyaltyCard";
 import ProfileDetails from "../../components/profile/ProfileDetails";
+import RecentActivity from "../../components/profile/RecentActivity";
+import HealthInfoCard from "../../components/profile/HealthInfoCard";
 import QuickLinks     from "../../components/profile/QuickLinks";
 import { Toast }      from "../../components/profile/ProfileUI";
+import { validateProfile, hasErrors, normalizePhone } from "../../components/profile/profileValidation";
 
 import {
   TOAST_DURATION_MS,
   MAX_PHOTO_SIZE_MB,
   MAX_PHOTO_SIZE_BYTES,
-  PROFILE_PICTURE_PATH,
   ALLOWED_IMAGE_TYPES,
   ROUTES,
 } from "../../components/utils/constants";
 
-// Base URL for all API calls — falls back to localhost in development
-const API_BASE = `${(import.meta.env.VITE_API_URL_RAILWAY && import.meta.env.VITE_API_URL_RAILWAY !== 'undefined' ? import.meta.env.VITE_API_URL_RAILWAY : 'http://localhost:5000')}/api`;
+// Full-height centred message used for loading / error / not-found states.
+function StateMessage({ children }) {
+  return (
+    <div
+      className="flex flex-col gap-3 justify-center items-center min-h-[60vh] px-4 text-center text-[14px]"
+      style={{ color: C.textMuted, fontFamily: FONT.body, background: C.bg }}
+    >
+      {children}
+    </div>
+  );
+}
 
 export default function CustomerProfilePage() {
   const navigate = useNavigate();
-  const auth     = getAuth();
-  const storage  = getStorage();
+  // AuthProvider only renders children once Firebase has restored the session,
+  // so currentUser is reliable here (unlike getAuth().currentUser on a refresh).
+  const { currentUser, logout } = useAuth();
 
-  // Core profile state
   const [user, setUser]                     = useState(null);
-  const [loading, setLoading]               = useState(true);
+  const [status, setStatus]                 = useState("loading"); // loading | ready | error | notfound
   const [editing, setEditing]               = useState(false);
   const [saving, setSaving]                 = useState(false);
   const [toast, setToast]                   = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const toastTimer = useRef(null);
 
-  // Editable profile fields — kept separate so cancel can restore original values
+  // Editable fields — kept separate so Cancel can restore the saved values
   const [fullName, setFullName] = useState("");
   const [phone, setPhone]       = useState("");
   const [address, setAddress]   = useState("");
 
-  // Shows a toast notification and auto-dismisses it after the configured duration
-  const showToast = (msg, type = "success") => {
+  const showToast = useCallback((msg, type = "success") => {
+    clearTimeout(toastTimer.current);
     setToast({ msg, type });
-    setTimeout(() => setToast(null), TOAST_DURATION_MS);
+    toastTimer.current = setTimeout(() => setToast(null), TOAST_DURATION_MS);
+  }, []);
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
+
+  const resetForm = (u) => {
+    setFullName(u?.fullName || "");
+    setPhone(u?.phone || "");
+    setAddress(u?.address || "");
   };
 
-  // ── fetchUser — calls backend GET /api/profile/:uid ───────────────────────
+  // ── Load profile from Firestore users/{uid} ────────────────────────────────
+  const loadProfile = useCallback(async () => {
+    if (!currentUser) { navigate(ROUTES.LOGIN); return; }
+    setStatus("loading");
+    try {
+      const data = await getProfile(currentUser.uid);
+      if (!data) { setStatus("notfound"); return; }
+
+      const mapped = {
+        ...data,
+        email: data.email || currentUser.email,
+        // LoyaltyCard reads these; never derive points from totalSpent.
+        totalPoints: data.loyaltyPoints ?? 0,
+        level: data.loyaltyTier ?? data.level ?? "Silver",
+      };
+      setUser(mapped);
+      resetForm(mapped);
+      setStatus("ready");
+    } catch (err) {
+      console.error("Failed to load profile:", err);
+      setStatus("error");
+    }
+  }, [currentUser, navigate]);
+
+  useEffect(() => { loadProfile(); }, [loadProfile]);
+
+  // ── Demo loyalty points (display only, never saved) ────────────────────────
+  // Once the profile is loaded, count the customer's orders and apply the demo
+  // rule — but only when no real loyaltyPoints are stored on the profile.
+  const profileUid   = user?.id;
+  const profileEmail = user?.email;
+  const storedPoints = user?.loyaltyPoints;
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const currentUser = auth.currentUser;
-        // Redirect to login if no authenticated user is found
-        if (!currentUser) { navigate(ROUTES.LOGIN); return; }
+    if (!profileUid) return;
+    let active = true;
+    getOrderCount(profileUid, profileEmail)
+      .then((count) => {
+        if (!active) return;
+        const { points } = resolveLoyaltyPoints(storedPoints, count);
+        setUser((prev) => prev && ({ ...prev, totalPoints: points }));
+      })
+      .catch((err) => console.error("Failed to count orders for loyalty:", err));
+    return () => { active = false; };
+  }, [profileUid, profileEmail, storedPoints]);
 
-        // Fetch profile from backend — backend reads Firestore via FirebaseService
-        const res = await fetch(`${API_BASE}/profile/${currentUser.uid}`);
-        if (!res.ok) throw new Error('Failed to fetch profile');
+  // ── Validation / dirty tracking ────────────────────────────────────────────
+  const errors  = validateProfile({ fullName, phone, address });
+  const isDirty = !!user && (
+    fullName.trim() !== (user.fullName || "") ||
+    normalizePhone(phone) !== normalizePhone(user.phone) ||
+    address.trim() !== (user.address || "")
+  );
 
-        const data = await res.json();
-
-        // Use only the actual loyalty fields from the users collection.
-        // Never use totalSpent as loyalty points.
-        const mappedUser = {
-          ...data,
-          totalPoints: data.loyaltyPoints ?? 0,
-          level: data.loyaltyTier ?? data.level ?? "Silver",
-        };
-
-        setUser(mappedUser);
-        // Pre-populate edit fields with existing profile data
-        setFullName(mappedUser.fullName || "");
-        setPhone(mappedUser.phone       || "");
-        setAddress(mappedUser.address   || "");
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUser();
-  }, []);
-
-  // ── handleSave — calls backend PUT /api/profile/:uid ─────────────────────
+  // ── Save name / phone / address ────────────────────────────────────────────
   const handleSave = async () => {
-    if (!user) return;
+    if (!user || hasErrors(errors) || !isDirty) return;
     setSaving(true);
     try {
-      // Send updated fields to backend — backend writes to Firestore via FirebaseService
-      const res = await fetch(`${API_BASE}/profile/${user.id}`, {
-        method:  'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ fullName, phone, address }),
-      });
-      if (!res.ok) throw new Error('Failed to update profile');
-
-      // Update local state immediately so UI reflects changes without a refetch
-      setUser(prev => ({ ...prev, fullName, phone, address }));
+      const fields = {
+        fullName: fullName.trim(),
+        phone:    normalizePhone(phone),
+        address:  address.trim(),
+      };
+      await updateProfile(user.id, fields);
+      const next = { ...user, ...fields };
+      setUser(next);
+      resetForm(next);
       setEditing(false);
+      // Keep the navbar greeting in sync (AuthContext stores this at login).
+      try { sessionStorage.setItem("userName", fields.fullName); } catch { /* ignore */ }
       showToast("Profile updated successfully!");
     } catch (err) {
+      console.error("Failed to update profile:", err);
       showToast("Failed to update profile.", "error");
     } finally {
       setSaving(false);
     }
   };
 
-  // ── handleLogout — signs out via Firebase Auth then redirects ────────────
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      navigate(ROUTES.LOGIN);
-    } catch (err) {
-      showToast("Logout failed.", "error");
-    }
-  };
-
-  // ── handlePhotoChange ─────────────────────────────────────────────────────
-  // Firebase Storage upload stays in the frontend (not a Firestore read/write).
-  // Once the download URL is obtained, it is saved via backend PUT /api/profile/:uid
-  // so the backend (not the frontend) writes the photoURL to Firestore.
+  // ── Profile photo ──────────────────────────────────────────────────────────
   const handlePhotoChange = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
     if (!file || !user) return;
 
-    // Validate file type before uploading
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
       showToast("Please select a valid image (JPG, PNG, WEBP, GIF).", "error");
       return;
     }
-    // Validate file size before uploading
     if (file.size > MAX_PHOTO_SIZE_BYTES) {
       showToast(`Image must be smaller than ${MAX_PHOTO_SIZE_MB} MB.`, "error");
       return;
@@ -138,69 +169,80 @@ export default function CustomerProfilePage() {
 
     setUploadingPhoto(true);
     try {
-      // Step 1 — upload binary to Firebase Storage (frontend only, no Firestore involved)
-      const storageRef  = ref(storage, PROFILE_PICTURE_PATH(user.id));
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
-
-      // Step 2 — send the resulting download URL to the backend.
-      // Backend writes photoURL to Firestore via FirebaseService (no direct Firestore call here).
-      const res = await fetch(`${API_BASE}/profile/${user.id}`, {
-        method:  'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ photoURL: downloadURL }),
-      });
-      if (!res.ok) throw new Error('Failed to save photo URL');
-
-      // Update local user state so avatar re-renders immediately without a refetch
-      setUser(prev => ({ ...prev, photoURL: downloadURL }));
+      const url = await uploadProfilePhoto(user.id, file);
+      setUser((prev) => ({ ...prev, photoURL: url }));
       showToast("Profile picture updated!");
     } catch (err) {
-      console.error(err);
+      console.error("Failed to upload photo:", err);
       showToast("Failed to upload photo.", "error");
     } finally {
       setUploadingPhoto(false);
-      // Reset file input so the same file can be re-selected if needed
-      e.target.value = "";
     }
   };
 
-  // Show loading state while profile data is being fetched from the backend
-  if (loading) return (
-    <div
-      className="flex justify-center items-center min-h-[60vh] text-[14px]"
-      style={{ color: C.textMuted, fontFamily: FONT.body, background: C.bg }}
-    >
-      Loading profile…
-    </div>
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate(ROUTES.LOGIN);
+    } catch {
+      showToast("Logout failed.", "error");
+    }
+  };
+
+  // ── Non-ready states ───────────────────────────────────────────────────────
+  if (status === "loading") return <StateMessage>Loading profile…</StateMessage>;
+
+  if (status === "error") return (
+    <StateMessage>
+      <AlertCircle size={28} color={C.dangerText} />
+      <p>We couldn't load your profile. Please check your connection and try again.</p>
+      <button
+        onClick={loadProfile}
+        className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold text-white cursor-pointer border-none"
+        style={{ background: C.accent, fontFamily: FONT.body }}
+      >
+        <RefreshCw size={14} /> Retry
+      </button>
+    </StateMessage>
   );
 
-  // Return nothing if the fetch failed or returned null
-  if (!user) return null;
+  if (status === "notfound") return (
+    <StateMessage>
+      <AlertCircle size={28} color={C.gold} />
+      <p>No customer profile is linked to this account yet. Please contact the pharmacy for help.</p>
+      <button
+        onClick={handleLogout}
+        className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer"
+        style={{ color: C.dangerText, background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, fontFamily: FONT.body }}
+      >
+        Log out
+      </button>
+    </StateMessage>
+  );
 
+  // ── Main view ──────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen" style={{ background: C.bg, fontFamily: FONT.body }}>
-
-      {/* Global toast notification — shown for success and error feedback */}
       <Toast toast={toast} />
 
-      {/* Hero section with avatar and photo upload button */}
-      <ProfileHero
-        user={user}
-        uploading={uploadingPhoto}
-        onPhotoChange={handlePhotoChange}
-      />
+      {/* Green hero with identity block; loyalty card sits inside it */}
+      <ProfileHero user={user} uploading={uploadingPhoto} onPhotoChange={handlePhotoChange}>
+        <LoyaltyCard user={user} />
+      </ProfileHero>
 
-      {/* Loyalty points and customer ID card */}
-      <LoyaltyCard user={user} />
+      {/* Two columns on large screens; single stacked column on phones/tablets.
+          Mobile order: details → quick links → activity → health → logout.
+          Logout spans all 12 columns so it always sits below both columns. */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 lg:pt-8 pb-10 grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
 
-      <div className="max-w-[700px] mx-auto px-6 pt-6 pb-10 flex flex-col gap-5">
-
-        {/* Editable profile details — name, phone, address */}
+        {/* ── Left column: account details ── */}
+        <div className="lg:col-span-5 flex flex-col gap-5 min-w-0">
         <ProfileDetails
           user={user}
           editing={editing}
           saving={saving}
+          errors={editing ? errors : {}}
+          canSave={isDirty && !hasErrors(errors)}
           fullName={fullName}
           phone={phone}
           address={address}
@@ -208,23 +250,24 @@ export default function CustomerProfilePage() {
           onPhoneChange={setPhone}
           onAddressChange={setAddress}
           onEdit={() => setEditing(true)}
-          onCancel={() => {
-            // Restore original values when the user cancels editing
-            setEditing(false);
-            setFullName(user.fullName || "");
-            setPhone(user.phone       || "");
-            setAddress(user.address   || "");
-          }}
+          onCancel={() => { setEditing(false); resetForm(user); }}
           onSave={handleSave}
         />
 
-        {/* Quick navigation links to Orders, Prescriptions, and Returns */}
-        <QuickLinks navigate={navigate} />
+        <QuickLinks />
+        </div>
 
-        {/* Logout button — signs out from Firebase Auth and redirects */}
+        {/* ── Right column: activity and health information ── */}
+        <div className="lg:col-span-7 flex flex-col gap-5 min-w-0">
+        <RecentActivity uid={user.id} email={user.email} />
+
+        <HealthInfoCard uid={user.id} onToast={showToast} />
+        </div>
+
+        {/* ── Logout: full width, below all page content ── */}
         <button
           onClick={handleLogout}
-          className="flex items-center justify-center gap-2 w-full py-[13px] rounded-xl text-[14px] font-bold cursor-pointer"
+          className="lg:col-span-12 flex items-center justify-center gap-2 w-full py-[13px] rounded-xl text-[14px] font-bold cursor-pointer"
           style={{
             background: C.dangerBg,
             color:      C.dangerText,
@@ -234,7 +277,6 @@ export default function CustomerProfilePage() {
         >
           <LogOut size={16} /> Log Out
         </button>
-
       </div>
     </div>
   );

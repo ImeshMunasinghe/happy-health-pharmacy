@@ -7,7 +7,8 @@ import { C, FONT, inputStyle } from "./profileTheme";
 // ── Field ─────────────────────────────────────────────────────────────────────
 // Label + input wrapper used in the edit form.
 // `icon` is an optional Lucide component rendered inline before the label text.
-function Field({ label, icon: Icon, children }) {
+function Field({ label, icon, error, children }) {
+  const Icon = icon;
   return (
     <div className="flex flex-col gap-[6px]">
       <label
@@ -19,6 +20,12 @@ function Field({ label, icon: Icon, children }) {
       </label>
       {/* Slotted input or textarea */}
       {children}
+      {/* Inline validation message */}
+      {error && (
+        <p role="alert" className="text-[11px] font-semibold" style={{ color: C.dangerText }}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -27,7 +34,8 @@ function Field({ label, icon: Icon, children }) {
 // Read-only display row used in the non-editing view.
 // Shows an icon, a small label, and the field value.
 // `accent` flag renders the value in the app accent colour (used for email).
-function InfoRow({ icon: Icon, label, value, accent }) {
+function InfoRow({ icon, label, value, accent }) {
+  const Icon = icon;
   return (
     <div
       className="flex items-center gap-3 px-4 py-3 rounded-[10px]"
@@ -64,7 +72,7 @@ function InfoRow({ icon: Icon, label, value, accent }) {
 //   onEdit / onCancel / onSave    — action callbacks
 export default function ProfileDetails({
   user,
-  editing, saving,
+  editing, saving, errors = {}, canSave = true,
   fullName, phone, address,
   onFullNameChange, onPhoneChange, onAddressChange,
   onEdit, onCancel, onSave,
@@ -113,11 +121,11 @@ export default function ProfileDetails({
             {/* Save — disabled and lightened while the API call is in flight */}
             <button
               onClick={onSave}
-              disabled={saving}
+              disabled={saving || !canSave}
               className="flex items-center gap-[5px] text-[12px] font-semibold text-white px-[14px] py-[6px] rounded-lg border-none"
               style={{
-                background: saving ? "#93c5fd" : C.accent,
-                cursor: saving ? "not-allowed" : "pointer",
+                background: saving || !canSave ? "#9CC4B0" : C.accent,
+                cursor: saving || !canSave ? "not-allowed" : "pointer",
                 fontFamily: FONT.body,
                 boxShadow: "0 4px 12px rgba(26,135,225,0.25)",
               }}
@@ -133,7 +141,7 @@ export default function ProfileDetails({
         {editing ? (
           <>
             {/* Editable fields for name, phone, and address */}
-            <Field label="Full Name" icon={User}>
+            <Field label="Full Name" icon={User} error={errors.fullName}>
               <input style={inputStyle} value={fullName} onChange={e => onFullNameChange(e.target.value)} placeholder="Your full name" />
             </Field>
             {/* Email is read-only — users cannot change their login email here */}
@@ -144,10 +152,10 @@ export default function ProfileDetails({
                 disabled
               />
             </Field>
-            <Field label="Phone" icon={Phone}>
-              <input style={inputStyle} value={phone} onChange={e => onPhoneChange(e.target.value)} placeholder="Phone number" />
+            <Field label="Phone" icon={Phone} error={errors.phone}>
+              <input style={inputStyle} value={phone} onChange={e => onPhoneChange(e.target.value)} placeholder="07X XXX XXXX" inputMode="tel" />
             </Field>
-            <Field label="Address" icon={MapPin}>
+            <Field label="Address" icon={MapPin} error={errors.address}>
               <textarea
                 style={{ ...inputStyle, resize: "vertical", lineHeight: 1.6 }}
                 rows={3}

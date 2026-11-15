@@ -1,0 +1,57 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Firestore security rules for the Customer Profile feature.
+//
+// ⚠ NOT AUTO-DEPLOYED. This project has no firebase.json, and the live rules
+//   are managed in the Firebase console. Deploying this file on its own would
+//   REPLACE all existing rules and break other portals (admin, supplier,
+//   pharmacist). Merge the `match` blocks below into the console rules instead.
+//
+// Roles are inferred the same way AuthContext does: by which collection holds
+// a document for the signed-in uid.
+// ─────────────────────────────────────────────────────────────────────────────
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn()      { return request.auth != null; }
+    function isOwner(uid)    { return signedIn() && request.auth.uid == uid; }
+    function isPharmacist()  { return signedIn() && exists(/databases/$(database)/documents/pharmacists/$(request.auth.uid)); }
+    function isAdmin()       { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+
+    // ── users/{uid} — main customer profile ────────────────────────────────
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isPharmacist() || isAdmin();
+
+      // Customers may only change their own contact fields. Loyalty points,
+      // tier, role, customerId and email stay server/admin controlled.
+      allow update: if isOwner(uid)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['fullName', 'phone', 'address', 'photoURL', 'updatedAt', 'lastLogin'])
+        && (!('fullName' in request.resource.data) || request.resource.data.fullName is string && request.resource.data.fullName.size() <= 60)
+        && (!('address'  in request.resource.data) || request.resource.data.address  is string && request.resource.data.address.size()  <= 200);
+
+      // (Keep your existing create / admin-update rules for this path.)
+
+      // ── users/{uid}/private/health — sensitive, opt-in sharing ──────────
+      match /private/health {
+        allow read, write: if isOwner(uid);
+        // Pharmacists may read only when the customer opted in.
+        allow read: if isPharmacist() && resource.data.shareWithPharmacist == true;
+        // Admins intentionally have no access to clinical data.
+      }
+    }
+
+    // ── Recent activity (read-only from the profile page) ─────────────────
+    match /prescriptions/{id} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      // (Keep existing pharmacist/admin and create rules.)
+    }
+
+    match /CustomerOrders/{id} {
+      // CustomerOrders are linked by email, not uid.
+      allow read: if signedIn() && resource.data.email == request.auth.token.email;
+      // (Keep existing pharmacist/admin rules.)
+    }
+  }
+}

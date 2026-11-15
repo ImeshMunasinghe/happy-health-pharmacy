@@ -10,11 +10,15 @@ import { C, FONT } from "./profileTheme";
 //   sub     — short description shown below the label
 //   color   — accent colour used for the icon and its background tint
 //   onClick — navigation handler
-function QuickLinkCard({ icon: Icon, label, sub, color, onClick }) {
+function QuickLinkCard({ icon, label, sub, color, onClick }) {
+  const Icon = icon;
   return (
     <div
       onClick={onClick}
-      className="flex items-center gap-3 px-4 py-[14px] rounded-xl cursor-pointer transition-shadow duration-150"
+      role="link"
+      tabIndex={0}
+      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+      className="flex items-center gap-3 px-4 py-[14px] rounded-xl cursor-pointer transition-shadow duration-150 min-w-0"
       style={{
         background: C.surface,
         border: `1px solid ${C.border}`,
@@ -33,7 +37,7 @@ function QuickLinkCard({ icon: Icon, label, sub, color, onClick }) {
       </div>
 
       {/* Label and supporting description */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <p className="text-[13px] font-bold" style={{ color: C.textPrimary }}>{label}</p>
         {sub && <p className="text-[11px] mt-[2px]" style={{ color: C.textMuted }}>{sub}</p>}
       </div>
@@ -73,7 +77,9 @@ export default function QuickLinks() {
       </div>
 
       {/* ── Navigation link cards ── */}
-      <div className="px-4 py-[14px] flex flex-col gap-[10px]">
+      {/* Stacked on phones; three across on tablets (full-width column);
+          stacked again on desktop, where it sits in the narrower left column */}
+      <div className="px-4 py-[14px] grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-[10px]">
         {/* Orders — view history and track deliveries */}
         <QuickLinkCard
           icon={ShoppingBag} label="My Orders"
