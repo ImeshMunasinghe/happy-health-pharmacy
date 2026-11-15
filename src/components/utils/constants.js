@@ -11,6 +11,7 @@ export const ROUTES = {
   LOGIN:                "/login",
   CUSTOMER_PRESCRIPTION: "/customer/prescription",
   CUSTOMER_RETURNS:      "/customer/returns",
+  CUSTOMER_ORDERS:       "/customer/orders",
 };
 
 // Firestore collections
@@ -18,6 +19,7 @@ export const COLLECTIONS = {
   USERS:            "users",
   CUSTOMER_ORDERS:  "CustomerOrders",
   CUSTOMER_RETURNS: "CustomerReturns",
+  PRESCRIPTIONS:    "prescriptions",
 };
 
 // Hero Carousel
